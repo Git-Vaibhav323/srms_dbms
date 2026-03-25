@@ -22,7 +22,11 @@ app.use(express.static(path.join(__dirname)));
 const db = mysql.createConnection({
   host    : 'localhost',
   user    : 'root',
+<<<<<<< HEAD
   password: 'omsairam@17',    // ← CHANGE THIS to your MySQL root password
+=======
+  password: '24BDS1164',    // ← CHANGE THIS to your MySQL root password
+>>>>>>> 13e04ca37b6bf11b2d6702c99e20997424e0a8df
   database: 'srms_db'
 });
 

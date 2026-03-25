@@ -5,10 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>SRMS — Server Resource Management System</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<<<<<<< HEAD
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+=======
+>>>>>>> 13e04ca37b6bf11b2d6702c99e20997424e0a8df
 <style>
 :root{
   --bg:#0b0f1a;--surface:#111827;--surface2:#1a2235;--border:#1e2d45;
@@ -215,7 +218,10 @@ textarea{resize:vertical;min-height:70px;}
     </div>
     <div class="topbar-right">
       <button class="btn btn-ghost btn-sm" onclick="go('queries',null)">⌗ Query</button>
+<<<<<<< HEAD
       <button class="btn btn-primary btn-sm" id="report-btn" style="display:none" onclick="generateReport()">📊 Generate Report</button>
+=======
+>>>>>>> 13e04ca37b6bf11b2d6702c99e20997424e0a8df
       <button class="btn btn-primary btn-sm" id="addbtn" onclick="openAdd()" style="display:none">+ Add</button>
     </div>
   </div>
@@ -247,7 +253,10 @@ textarea{resize:vertical;min-height:70px;}
           <div class="sbox"><span>🔍</span><input placeholder="Search users..." oninput="filter('t-users',this.value)"/></div>
           <button class="btn btn-ghost btn-sm" onclick="navFirst('t-users')">⏮ First</button>
           <button class="btn btn-ghost btn-sm" onclick="navLast('t-users')">Last ⏭</button>
+<<<<<<< HEAD
           <button class="btn btn-success btn-sm" onclick="exportToExcel('users')">⬇ Export Excel</button>
+=======
+>>>>>>> 13e04ca37b6bf11b2d6702c99e20997424e0a8df
         </div>
         <table id="t-users">
           <thead><tr><th>ID</th><th>First Name</th><th>Last Name</th><th>Email</th><th>Role</th><th>Department</th><th>Phone</th><th>Actions</th></tr></thead>
@@ -264,7 +273,10 @@ textarea{resize:vertical;min-height:70px;}
           <div class="sbox"><span>🔍</span><input placeholder="Search servers..." oninput="filter('t-servers',this.value)"/></div>
           <button class="btn btn-ghost btn-sm" onclick="navFirst('t-servers')">⏮ First</button>
           <button class="btn btn-ghost btn-sm" onclick="navLast('t-servers')">Last ⏭</button>
+<<<<<<< HEAD
           <button class="btn btn-success btn-sm" onclick="exportToExcel('servers')">⬇ Export Excel</button>
+=======
+>>>>>>> 13e04ca37b6bf11b2d6702c99e20997424e0a8df
         </div>
         <table id="t-servers">
           <thead><tr><th>ID</th><th>Name</th><th>CPU</th><th>RAM (GB)</th><th>Storage (GB)</th><th>Data Center</th><th>Rack</th><th>Status</th><th>Actions</th></tr></thead>
@@ -281,7 +293,10 @@ textarea{resize:vertical;min-height:70px;}
           <div class="sbox"><span>🔍</span><input placeholder="Search allocations..." oninput="filter('t-alloc',this.value)"/></div>
           <button class="btn btn-ghost btn-sm" onclick="navFirst('t-alloc')">⏮ First</button>
           <button class="btn btn-ghost btn-sm" onclick="navLast('t-alloc')">Last ⏭</button>
+<<<<<<< HEAD
           <button class="btn btn-success btn-sm" onclick="exportToExcel('allocations')">⬇ Export Excel</button>
+=======
+>>>>>>> 13e04ca37b6bf11b2d6702c99e20997424e0a8df
         </div>
         <table id="t-alloc">
           <thead><tr><th>ID</th><th>User</th><th>Server</th><th>Alloc Date</th><th>Release Date</th><th>CPU</th><th>RAM (GB)</th><th>Storage (GB)</th><th>Actions</th></tr></thead>
@@ -298,7 +313,10 @@ textarea{resize:vertical;min-height:70px;}
           <div class="sbox"><span>🔍</span><input placeholder="Search maintenance..." oninput="filter('t-maint',this.value)"/></div>
           <button class="btn btn-ghost btn-sm" onclick="navFirst('t-maint')">⏮ First</button>
           <button class="btn btn-ghost btn-sm" onclick="navLast('t-maint')">Last ⏭</button>
+<<<<<<< HEAD
           <button class="btn btn-success btn-sm" onclick="exportToExcel('maintenance')">⬇ Export Excel</button>
+=======
+>>>>>>> 13e04ca37b6bf11b2d6702c99e20997424e0a8df
         </div>
         <table id="t-maint">
           <thead><tr><th>ID</th><th>Server</th><th>Date</th><th>Description</th><th>Technician</th><th>Priority</th><th>Status</th><th>Actions</th></tr></thead>
@@ -459,6 +477,7 @@ textarea{resize:vertical;min-height:70px;}
 
 <div id="toast"></div>
 
+<<<<<<< HEAD
 <!-- ── HIDDEN REPORT CONTAINER ── -->
 <div id="report-container" style="display:none;position:fixed;left:-9999px;top:0;width:210mm;height:297mm;background:white;padding:20px;font-family:Arial,sans-serif;color:#333;">
   <div style="max-width:190mm;margin:0 auto;">
@@ -517,6 +536,8 @@ textarea{resize:vertical;min-height:70px;}
   </div>
 </div>
 
+=======
+>>>>>>> 13e04ca37b6bf11b2d6702c99e20997424e0a8df
 <script>
 // ══════════════════════════════════════════════════════
 //  CONFIG
@@ -572,6 +593,7 @@ async function checkConn(){
 }
 
 // ══════════════════════════════════════════════════════
+<<<<<<< HEAD
 //  EXPORT TO EXCEL
 // ══════════════════════════════════════════════════════
 function exportToExcel(tableType) {
@@ -876,6 +898,8 @@ async function convertReportToPDF() {
 }
 
 // ══════════════════════════════════════════════════════
+=======
+>>>>>>> 13e04ca37b6bf11b2d6702c99e20997424e0a8df
 //  NAVIGATION
 // ══════════════════════════════════════════════════════
 let curPanel='dashboard';
@@ -895,9 +919,12 @@ function go(name, el){
   const ab=$('addbtn');
   if(addLabels[name]){ ab.style.display='inline-flex'; ab.textContent=addLabels[name]; }
   else { ab.style.display='none'; }
+<<<<<<< HEAD
   const rb=$('report-btn');
   if(name==='dashboard'){ rb.style.display='inline-flex'; }
   else { rb.style.display='none'; }
+=======
+>>>>>>> 13e04ca37b6bf11b2d6702c99e20997424e0a8df
   loadPanel(name);
 }
 
