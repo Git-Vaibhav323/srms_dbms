@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SRMS — Server Resource Management System</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<style>
+:root{
+  --bg:#0b0f1a;--surface:#111827;--surface2:#1a2235;--border:#1e2d45;
+  --accent:#3b82f6;--accent2:#06b6d4;--accent3:#8b5cf6;
+  --success:#10b981;--warning:#f59e0b;--danger:#ef4444;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);height:100vh;overflow:hidden;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.app{display:flex;height:100vh;}
+
+/* ── SIDEBAR ── */
+.sidebar{width:230px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+.logo{padding:18px 16px;border-bottom:1px solid var(--border);}
+.logo-title{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent);letter-spacing:2px;}
+.logo-sub{font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono);}
+.nav-sec{padding:14px 12px 6px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 12px;margin:2px 8px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;border:1px solid transparent;}
+.nav-item:hover{background:var(--surface2);color:var(--text);border-color:var(--border);}
+.nav-item.active{background:rgba(59,130,246,.15);color:var(--accent);border-color:rgba(59,130,246,.3);}
+.nav-item .ic{font-size:14px;width:16px;text-align:center;}
+.nbadge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-family:var(--mono);padding:1px 5px;border-radius:8px;min-width:18px;text-align:center;}
+.sidebar-foot{margin-top:auto;padding:12px;border-top:1px solid var(--border);}
+.vitbadge{background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.25);border-radius:6px;padding:8px 10px;}
+.vtitle{font-size:11px;font-weight:600;color:var(--accent3);}
+.vsub{font-size:10px;color:var(--text3);margin-top:2px;}
+
+/* connection status */
+.conn-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;}
+.conn-on{background:var(--success);}
+.conn-off{background:var(--danger);}
+#conn-status{font-size:10px;font-family:var(--mono);color:var(--text3);padding:6px 12px 10px;}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:50px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.page-title{font-size:15px;font-weight:600;}
+.page-crumb{font-size:11px;color:var(--text3);font-family:var(--mono);margin-left:8px;}
+.topbar-right{display:flex;gap:8px;align-items:center;}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:var(--sans);}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#2563eb;}
+.btn-ghost{background:transparent;color:var(--text2);border-color:var(--border);}
+.btn-ghost:hover{background:var(--surface2);color:var(--text);}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--danger);border-color:rgba(239,68,68,.3);}
+.btn-success{background:rgba(16,185,129,.15);color:var(--success);border-color:rgba(16,185,129,.25);}
+.btn-warning{background:rgba(245,158,11,.15);color:var(--warning);border-color:rgba(245,158,11,.25);}
+.btn-sm{padding:5px 9px;font-size:11px;}
+.content{flex:1;overflow-y:auto;padding:20px;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.scard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+.slabel{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
+.sval{font-size:26px;font-weight:700;font-family:var(--mono);margin:5px 0 3px;}
+.scard.blue .sval{color:var(--accent);}
+.scard.cyan .sval{color:var(--accent2);}
+.scard.purple .sval{color:var(--accent3);}
+.scard.green .sval{color:var(--success);}
+.ssub{font-size:11px;color:var(--text3);}
+
+/* ── TABLE ── */
+.twrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;}
+.tbar{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.sbox{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;flex:1;max-width:280px;}
+.sbox input{background:transparent;border:none;outline:none;font-size:13px;color:var(--text);width:100%;font-family:var(--sans);}
+.sbox input::placeholder{color:var(--text3);}
+table{width:100%;border-collapse:collapse;}
+thead th{background:var(--surface2);padding:9px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid rgba(30,45,69,.5);transition:background .1s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(59,130,246,.04);}
+tbody td{padding:10px 14px;font-size:13px;}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;}
+.b-active{background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.25);}.b-active::before{background:var(--success);}
+.b-maint{background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.25);}.b-maint::before{background:var(--warning);}
+.b-pending{background:rgba(239,68,68,.15);color:var(--danger);border:1px solid rgba(239,68,68,.25);}.b-pending::before{background:var(--danger);}
+.b-completed{background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.25);}.b-completed::before{background:var(--success);}
+.b-inprog{background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.25);}.b-inprog::before{background:var(--warning);}
+.b-role{background:rgba(139,92,246,.12);color:var(--accent3);border:1px solid rgba(139,92,246,.2);font-size:10px;}
+.tfoot{padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.tcount{font-size:11px;color:var(--text3);font-family:var(--mono);}
+.abtns{display:flex;gap:5px;}
+
+/* ── SECTION HEADER ── */
+.shdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.stitle{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.stitle::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;}
+
+/* ── CHARTS ── */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.ccrd{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.ctitle{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.bar-lbl{width:80px;font-size:11px;color:var(--text3);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-trk{flex:1;height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.bar-fil{height:100%;border-radius:4px;transition:width 1s ease;}
+.bar-val{width:36px;text-align:right;font-size:11px;font-family:var(--mono);color:var(--text2);}
+.pie-item{display:flex;align-items:center;gap:8px;padding:7px;background:var(--surface2);border-radius:6px;margin-bottom:6px;}
+.pie-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.pie-lbl{font-size:11px;color:var(--text2);}
+.pie-num{margin-left:auto;font-family:var(--mono);font-size:12px;font-weight:600;}
+
+/* ── MODAL ── */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.moverlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+.mhdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.mtitle{font-size:14px;font-weight:600;}
+.mclose{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px;}
+.mclose:hover{color:var(--text);background:var(--surface2);}
+.mbody{padding:20px;}
+.mfoot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg.full{grid-column:1/-1;}
+label{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);}
+input,select,textarea{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 11px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;transition:border-color .15s;width:100%;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+select option{background:var(--surface2);}
+textarea{resize:vertical;min-height:70px;}
+
+/* ── QUERY PANEL ── */
+.qeditor{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px;}
+.qehdr{background:var(--surface2);padding:9px 14px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);}
+.qehdr span{font-family:var(--mono);font-size:11px;color:var(--text3);}
+.qtarea{width:100%;background:#080c14;border:none;padding:14px;font-family:var(--mono);font-size:13px;color:#a5f3fc;outline:none;min-height:110px;resize:vertical;}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.pbtn{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:5px 10px;font-size:11px;font-family:var(--mono);color:var(--text2);cursor:pointer;transition:all .15s;}
+.pbtn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:6px;}
+.ti{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 14px;min-width:240px;display:flex;align-items:center;gap:8px;font-size:13px;animation:sli .2s ease;box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.ti.success{border-left:3px solid var(--success);}
+.ti.error{border-left:3px solid var(--danger);}
+.ti.info{border-left:3px solid var(--accent);}
+@keyframes sli{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* ── LOADING ── */
+.loading{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty{text-align:center;padding:40px;color:var(--text3);}
+
+/* ── CALC ── */
+.calc-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px;}
+.ubar{margin-bottom:12px;}
+.ulbl{display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:5px;}
+.utrk{height:9px;background:var(--surface2);border-radius:5px;overflow:hidden;}
+.ufil{height:100%;border-radius:5px;transition:width .5s;}
+.rbox{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:12px;}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.ritem{text-align:center;}
+.rval{font-size:20px;font-weight:700;font-family:var(--mono);}
+.rlbl{font-size:10px;color:var(--text3);margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-title">SRMS</div>
+    <div class="logo-sub">Server Resource Mgmt</div>
+  </div>
+  <div id="conn-status"><span class="conn-dot conn-off" id="cdot"></span>Connecting...</div>
+
+  <div class="nav-sec">Main</div>
+  <div class="nav-item active" onclick="go('dashboard',this)"><span class="ic">⬡</span>Dashboard</div>
+
+  <div class="nav-sec">Tables</div>
+  <div class="nav-item" onclick="go('users',this)"><span class="ic">👤</span>Users<span class="nbadge" id="nb-users">—</span></div>
+  <div class="nav-item" onclick="go('servers',this)"><span class="ic">🖥</span>Servers<span class="nbadge" id="nb-servers">—</span></div>
+  <div class="nav-item" onclick="go('alloc',this)"><span class="ic">⚡</span>Allocations<span class="nbadge" id="nb-alloc">—</span></div>
+  <div class="nav-item" onclick="go('maint',this)"><span class="ic">🔧</span>Maintenance<span class="nbadge" id="nb-maint">—</span></div>
+
+  <div class="nav-sec">Operations</div>
+  <div class="nav-item" onclick="go('queries',this)"><span class="ic">⌗</span>SQL Queries</div>
+  <div class="nav-item" onclick="go('calc',this)"><span class="ic">◈</span>Resource Calc</div>
+
+  <div class="sidebar-foot">
+    <div class="vitbadge">
+      <div class="vtitle">VIT Chennai · BCSE302L</div>
+      <div class="vsub">Sahil Poply · 24BDS1135</div>
+      <div class="vsub">Vaibhav Dwivedi · 24BDS1164</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;">
+      <span class="page-title" id="ptitle">Dashboard</span>
+      <span class="page-crumb" id="pcrumb">/ overview</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-sm" onclick="go('queries',null)">⌗ Query</button>
+      <button class="btn btn-primary btn-sm" id="report-btn" style="display:none" onclick="generateReport()">📊 Generate Report</button>
+      <button class="btn btn-primary btn-sm" id="addbtn" onclick="openAdd()" style="display:none">+ Add</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div id="p-dashboard" class="panel active">
+      <div class="stats-grid">
+        <div class="scard blue"><div class="slabel">Total Users</div><div class="sval" id="st-users">—</div><div class="ssub">Registered</div></div>
+        <div class="scard cyan"><div class="slabel">Active Servers</div><div class="sval" id="st-servers">—</div><div class="ssub">Online</div></div>
+        <div class="scard purple"><div class="slabel">Allocations</div><div class="sval" id="st-alloc">—</div><div class="ssub">Total records</div></div>
+        <div class="scard green"><div class="slabel">Maintenance</div><div class="sval" id="st-maint">—</div><div class="ssub">Records</div></div>
+      </div>
+      <div class="dash-grid">
+        <div class="ccrd"><div class="ctitle">CPU Capacity by Server</div><div id="ch-cpu"></div></div>
+        <div class="ccrd"><div class="ctitle">Maintenance Status</div><div id="ch-maint"></div></div>
+        <div class="ccrd"><div class="ctitle">RAM Capacity (GB) by Server</div><div id="ch-ram"></div></div>
+        <div class="ccrd"><div class="ctitle">Allocations per User</div><div id="ch-alloc"></div></div>
+      </div>
+      <div class="shdr"><div class="stitle">Recent Allocations</div></div>
+      <div class="twrap"><table><thead><tr><th>ID</th><th>User</th><th>Server</th><th>Date</th><th>CPU</th><th>RAM</th><th>Status</th></tr></thead><tbody id="recent-rows"></tbody></table></div>
+    </div>
+
+    <!-- USERS -->
+    <div id="p-users" class="panel">
+      <div class="twrap">
+        <div class="tbar">
+          <div class="sbox"><span>🔍</span><input placeholder="Search users..." oninput="filter('t-users',this.value)"/></div>
+          <button class="btn btn-ghost btn-sm" onclick="navFirst('t-users')">⏮ First</button>
+          <button class="btn btn-ghost btn-sm" onclick="navLast('t-users')">Last ⏭</button>
+          <button class="btn btn-success btn-sm" onclick="exportToExcel('users')">⬇ Export Excel</button>
+        </div>
+        <table id="t-users">
+          <thead><tr><th>ID</th><th>First Name</th><th>Last Name</th><th>Email</th><th>Role</th><th>Department</th><th>Phone</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="tfoot"><span class="tcount" id="c-users"></span></div>
+      </div>
+    </div>
+
+    <!-- SERVERS -->
+    <div id="p-servers" class="panel">
+      <div class="twrap">
+        <div class="tbar">
+          <div class="sbox"><span>🔍</span><input placeholder="Search servers..." oninput="filter('t-servers',this.value)"/></div>
+          <button class="btn btn-ghost btn-sm" onclick="navFirst('t-servers')">⏮ First</button>
+          <button class="btn btn-ghost btn-sm" onclick="navLast('t-servers')">Last ⏭</button>
+          <button class="btn btn-success btn-sm" onclick="exportToExcel('servers')">⬇ Export Excel</button>
+        </div>
+        <table id="t-servers">
+          <thead><tr><th>ID</th><th>Name</th><th>CPU</th><th>RAM (GB)</th><th>Storage (GB)</th><th>Data Center</th><th>Rack</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="tfoot"><span class="tcount" id="c-servers"></span></div>
+      </div>
+    </div>
+
+    <!-- ALLOCATIONS -->
+    <div id="p-alloc" class="panel">
+      <div class="twrap">
+        <div class="tbar">
+          <div class="sbox"><span>🔍</span><input placeholder="Search allocations..." oninput="filter('t-alloc',this.value)"/></div>
+          <button class="btn btn-ghost btn-sm" onclick="navFirst('t-alloc')">⏮ First</button>
+          <button class="btn btn-ghost btn-sm" onclick="navLast('t-alloc')">Last ⏭</button>
+          <button class="btn btn-success btn-sm" onclick="exportToExcel('allocations')">⬇ Export Excel</button>
+        </div>
+        <table id="t-alloc">
+          <thead><tr><th>ID</th><th>User</th><th>Server</th><th>Alloc Date</th><th>Release Date</th><th>CPU</th><th>RAM (GB)</th><th>Storage (GB)</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="tfoot"><span class="tcount" id="c-alloc"></span></div>
+      </div>
+    </div>
+
+    <!-- MAINTENANCE -->
+    <div id="p-maint" class="panel">
+      <div class="twrap">
+        <div class="tbar">
+          <div class="sbox"><span>🔍</span><input placeholder="Search maintenance..." oninput="filter('t-maint',this.value)"/></div>
+          <button class="btn btn-ghost btn-sm" onclick="navFirst('t-maint')">⏮ First</button>
+          <button class="btn btn-ghost btn-sm" onclick="navLast('t-maint')">Last ⏭</button>
+          <button class="btn btn-success btn-sm" onclick="exportToExcel('maintenance')">⬇ Export Excel</button>
+        </div>
+        <table id="t-maint">
+          <thead><tr><th>ID</th><th>Server</th><th>Date</th><th>Description</th><th>Technician</th><th>Priority</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="tfoot"><span class="tcount" id="c-maint"></span></div>
+      </div>
+    </div>
+
+    <!-- QUERIES -->
+    <div id="p-queries" class="panel">
+      <div class="shdr"><div class="stitle">SQL Query Runner — Live MySQL</div></div>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:7px;font-family:var(--mono)">// Preset Queries</div>
+        <div class="presets">
+          <button class="pbtn" onclick="lq('q1')">Q1: Active Servers (WHERE)</button>
+          <button class="pbtn" onclick="lq('q2')">Q2: JOIN User+Alloc+Server</button>
+          <button class="pbtn" onclick="lq('q3')">Q3: COUNT & AVG (GROUP BY)</button>
+          <button class="pbtn" onclick="lq('q4')">Q4: HAVING > 1 allocation</button>
+          <button class="pbtn" onclick="lq('q5')">Q5: Maintenance ORDER BY</button>
+          <button class="pbtn" onclick="lq('q6')">Q6: UPDATE Server Status</button>
+          <button class="pbtn" onclick="lq('q7')">Q7: DELETE allocation</button>
+          <button class="pbtn" onclick="lq('q8')">Q8: ALTER TABLE</button>
+          <button class="pbtn" onclick="lq('q9')">Q9: Servers under Maint</button>
+          <button class="pbtn" onclick="lq('q10')">Q10: LIKE Search</button>
+        </div>
+      </div>
+      <div class="qeditor">
+        <div class="qehdr"><span>📄 query.sql</span><span style="margin-left:auto;color:var(--accent)">MySQL · srms_db</span></div>
+        <textarea class="qtarea" id="sqlinput" spellcheck="false" placeholder="-- Type any SQL query here...&#10;SELECT * FROM USER;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:18px;">
+        <button class="btn btn-primary" onclick="runQ()">▶ Execute on MySQL</button>
+        <button class="btn btn-ghost" onclick="$('sqlinput').value=''">✕ Clear</button>
+      </div>
+      <div id="qresult-wrap" style="display:none;">
+        <div class="shdr"><div class="stitle">Result</div><span id="qtime" style="font-size:11px;font-family:var(--mono);color:var(--text3);"></span></div>
+        <div class="twrap"><div style="overflow-x:auto;"><table id="qtable"><thead id="qthead"></thead><tbody id="qtbody"></tbody></table></div></div>
+      </div>
+      <div id="qmsg" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;"></div>
+    </div>
+
+    <!-- CALCULATOR -->
+    <div id="p-calc" class="panel">
+      <div class="calc-card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:16px;">Resource Allocation Calculator <span style="background:rgba(59,130,246,.15);color:var(--accent);padding:3px 8px;border-radius:4px;font-size:11px;font-family:var(--mono);margin-left:8px;">LIVE DATA</span></div>
+        <p style="font-size:13px;color:var(--text3);margin-bottom:18px;">Select a server and enter requested resources. The calculator checks real active allocations from the MySQL database to determine feasibility.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+          <div class="fg"><label>Select Server</label><select id="calc-sv" onchange="calcUpdate()"><option value="">-- Choose --</option></select></div>
+          <div class="fg"><label>Requested CPU (cores)</label><input type="number" id="calc-cpu" min="1" placeholder="e.g. 8" oninput="calcUpdate()"/></div>
+          <div class="fg"><label>Requested RAM (GB)</label><input type="number" id="calc-ram" min="1" placeholder="e.g. 32" oninput="calcUpdate()"/></div>
+        </div>
+        <div id="calc-bars" style="display:none;">
+          <div class="ubar"><div class="ulbl"><span>CPU After Allocation</span><span id="cpu-pct">0%</span></div><div class="utrk"><div class="ufil" id="cpu-bar" style="background:var(--accent);width:0%"></div></div></div>
+          <div class="ubar"><div class="ulbl"><span>RAM After Allocation</span><span id="ram-pct">0%</span></div><div class="utrk"><div class="ufil" id="ram-bar" style="background:var(--accent2);width:0%"></div></div></div>
+        </div>
+        <div id="calc-res" style="display:none;" class="rbox">
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:10px;text-transform:uppercase;">// Feasibility Report (from MySQL)</div>
+          <div class="rgrid">
+            <div class="ritem"><div class="rval" id="r-cpu" style="color:var(--accent)">—</div><div class="rlbl">Available CPU</div></div>
+            <div class="ritem"><div class="rval" id="r-ram" style="color:var(--accent2)">—</div><div class="rlbl">Available RAM (GB)</div></div>
+            <div class="ritem"><div class="rval" id="r-status" style="color:var(--success)">—</div><div class="rlbl">Feasibility</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="calc-card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:16px;">Live Server Utilization</div>
+        <div id="util-wrap"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ── MODALS ── -->
+<!-- User Modal -->
+<div id="m-user" class="moverlay">
+  <div class="modal">
+    <div class="mhdr"><span class="mtitle" id="mt-user">Add User</span><button class="mclose" onclick="closeM('m-user')">✕</button></div>
+    <div class="mbody">
+      <input type="hidden" id="eid-user"/>
+      <div class="fgrid">
+        <div class="fg"><label>First Name *</label><input id="u-fn" placeholder="Sahil"/></div>
+        <div class="fg"><label>Last Name *</label><input id="u-ln" placeholder="Poply"/></div>
+        <div class="fg"><label>Email *</label><input id="u-em" type="email" placeholder="user@email.com"/></div>
+        <div class="fg"><label>Role *</label>
+          <select id="u-ro"><option>Developer</option><option>Admin</option><option>Data Analyst</option><option>DevOps Engineer</option><option>System Administrator</option></select></div>
+        <div class="fg"><label>Department</label><input id="u-dep" placeholder="Engineering"/></div>
+        <div class="fg"><label>Phone No</label><input id="u-ph" placeholder="9876543210"/></div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn btn-ghost" onclick="closeM('m-user')">Cancel</button><button class="btn btn-primary" onclick="saveUser()">Save User</button></div>
+  </div>
+</div>
+
+<!-- Server Modal -->
+<div id="m-server" class="moverlay">
+  <div class="modal">
+    <div class="mhdr"><span class="mtitle" id="mt-server">Add Server</span><button class="mclose" onclick="closeM('m-server')">✕</button></div>
+    <div class="mbody">
+      <input type="hidden" id="eid-server"/>
+      <div class="fgrid">
+        <div class="fg full"><label>Server Name *</label><input id="s-nm" placeholder="Alpha-01"/></div>
+        <div class="fg"><label>CPU Capacity (cores) *</label><input id="s-cpu" type="number" placeholder="32"/></div>
+        <div class="fg"><label>RAM Capacity (GB) *</label><input id="s-ram" type="number" placeholder="128"/></div>
+        <div class="fg"><label>Storage Capacity (GB) *</label><input id="s-st" type="number" placeholder="2000"/></div>
+        <div class="fg"><label>Data Center *</label><input id="s-dc" placeholder="DC-Chennai"/></div>
+        <div class="fg"><label>Rack No *</label><input id="s-rk" placeholder="R-01"/></div>
+        <div class="fg full"><label>Status</label>
+          <select id="s-sx"><option>Active</option><option>Under Maintenance</option><option>Inactive</option></select></div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn btn-ghost" onclick="closeM('m-server')">Cancel</button><button class="btn btn-primary" onclick="saveServer()">Save Server</button></div>
+  </div>
+</div>
+
+<!-- Allocation Modal -->
+<div id="m-alloc" class="moverlay">
+  <div class="modal">
+    <div class="mhdr"><span class="mtitle">Add Allocation</span><button class="mclose" onclick="closeM('m-alloc')">✕</button></div>
+    <div class="mbody">
+      <div class="fgrid">
+        <div class="fg"><label>User *</label><select id="a-uid"></select></div>
+        <div class="fg"><label>Server *</label><select id="a-sid"></select></div>
+        <div class="fg"><label>Allocation Date *</label><input id="a-dt" type="date"/></div>
+        <div class="fg"><label>Release Date (opt)</label><input id="a-rd" type="date"/></div>
+        <div class="fg"><label>Allocated CPU *</label><input id="a-cpu" type="number" placeholder="8"/></div>
+        <div class="fg"><label>Allocated RAM (GB) *</label><input id="a-ram" type="number" placeholder="32"/></div>
+        <div class="fg full"><label>Allocated Storage (GB) *</label><input id="a-sto" type="number" placeholder="500"/></div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn btn-ghost" onclick="closeM('m-alloc')">Cancel</button><button class="btn btn-primary" onclick="saveAlloc()">Save Allocation</button></div>
+  </div>
+</div>
+
+<!-- Maintenance Modal -->
+<div id="m-maint" class="moverlay">
+  <div class="modal">
+    <div class="mhdr"><span class="mtitle" id="mt-maint">Add Maintenance</span><button class="mclose" onclick="closeM('m-maint')">✕</button></div>
+    <div class="mbody">
+      <input type="hidden" id="eid-maint"/>
+      <div class="fgrid">
+        <div class="fg full"><label>Server *</label><select id="m-sid"></select></div>
+        <div class="fg"><label>Date *</label><input id="m-dt" type="date"/></div>
+        <div class="fg"><label>Status</label>
+          <select id="m-sx"><option>Pending</option><option>In Progress</option><option>Completed</option></select></div>
+        <div class="fg"><label>Priority</label>
+          <select id="m-pr"><option>Low</option><option selected>Medium</option><option>High</option></select></div>
+        <div class="fg"><label>Tech First Name *</label><input id="m-fn" placeholder="Ankit"/></div>
+        <div class="fg"><label>Tech Last Name *</label><input id="m-ln" placeholder="Singh"/></div>
+        <div class="fg full"><label>Description</label><textarea id="m-ds" placeholder="Describe the maintenance work..."></textarea></div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn btn-ghost" onclick="closeM('m-maint')">Cancel</button><button class="btn btn-primary" onclick="saveMaint()">Save Record</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ── HIDDEN REPORT CONTAINER ── -->
+<div id="report-container" style="display:none;position:fixed;left:-9999px;top:0;width:210mm;height:297mm;background:white;padding:20px;font-family:Arial,sans-serif;color:#333;">
+  <div style="max-width:190mm;margin:0 auto;">
+    <!-- Title Section -->
+    <div style="text-align:center;margin-bottom:30px;border-bottom:2px solid #333;padding-bottom:20px;">
+      <div style="font-size:28px;font-weight:bold;color:#1e3a5f;margin-bottom:5px;">SRMS System Report</div>
+      <div style="font-size:14px;color:#666;margin-bottom:10px;">Server Resource Management System</div>
+      <div style="font-size:11px;color:#999;" id="report-date">Generated on: March 25, 2026 at 10:00 AM</div>
+    </div>
+
+    <!-- Summary Section -->
+    <div style="margin-bottom:30px;">
+      <div style="font-size:16px;font-weight:bold;color:#1e3a5f;margin-bottom:15px;border-bottom:1px solid #ccc;padding-bottom:10px;">Summary Statistics</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:15px;margin-bottom:20px;">
+        <div style="padding:15px;background:#f0f4f8;border-radius:8px;text-align:center;">
+          <div style="font-size:28px;font-weight:bold;color:#3b82f6;" id="report-users">—</div>
+          <div style="font-size:12px;color:#666;margin-top:5px;">Total Users</div>
+        </div>
+        <div style="padding:15px;background:#f0f8f6;border-radius:8px;text-align:center;">
+          <div style="font-size:28px;font-weight:bold;color:#06b6d4;" id="report-servers">—</div>
+          <div style="font-size:12px;color:#666;margin-top:5px;">Active Servers</div>
+        </div>
+        <div style="padding:15px;background:#f5f0f8;border-radius:8px;text-align:center;">
+          <div style="font-size:28px;font-weight:bold;color:#8b5cf6;" id="report-alloc">—</div>
+          <div style="font-size:12px;color:#666;margin-top:5px;">Allocations</div>
+        </div>
+        <div style="padding:15px;background:#f0f8f0;border-radius:8px;text-align:center;">
+          <div style="font-size:28px;font-weight:bold;color:#10b981;" id="report-maint">—</div>
+          <div style="font-size:12px;color:#666;margin-top:5px;">Maintenance</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div style="margin-bottom:30px;">
+      <div style="font-size:16px;font-weight:bold;color:#1e3a5f;margin-bottom:15px;border-bottom:1px solid #ccc;padding-bottom:10px;">System Overview</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-bottom:20px;">
+        <!-- Pie Chart -->
+        <div style="text-align:center;">
+          <div style="font-size:13px;font-weight:bold;color:#333;margin-bottom:10px;">Maintenance Status Distribution</div>
+          <canvas id="report-pie-chart" width="280" height="200" style="max-width:100%;"></canvas>
+        </div>
+        <!-- Bar Chart -->
+        <div style="text-align:center;">
+          <div style="font-size:13px;font-weight:bold;color:#333;margin-bottom:10px;">CPU Capacity by Server</div>
+          <canvas id="report-bar-chart" width="280" height="200" style="max-width:100%;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align:center;margin-top:40px;padding-top:15px;border-top:1px solid #ccc;font-size:11px;color:#999;">
+      <div>Generated by SRMS System</div>
+      <div style="margin-top:5px;">© 2026 VIT Chennai · BCSE302L</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════════
+const API = 'http://localhost:3000/api';
+
+// ── helpers ──
+const $ = id => document.getElementById(id);
+function toast(msg, type='success'){
+  const icons={success:'✓',error:'✗',info:'ℹ'};
+  const el=document.createElement('div');
+  el.className=`ti ${type}`;
+  el.innerHTML=`<span>${icons[type]}</span><span>${msg}</span>`;
+  $('toast').appendChild(el);
+  setTimeout(()=>el.remove(), type==='error'?5000:3000);
+}
+function badge(s){
+  const map={'Active':'b-active','Under Maintenance':'b-maint','Pending':'b-pending','In Progress':'b-inprog','Completed':'b-completed'};
+  return `<span class="badge ${map[s]||'b-active'}">${s}</span>`;
+}
+function roleBadge(r){ return `<span class="badge b-role">${r}</span>`; }
+function mono(t){ return `<code style="font-family:var(--mono);font-size:11px;color:var(--text3)">${t}</code>`; }
+
+// ── API call ──
+async function api(method, endpoint, body=null){
+  try {
+    const opts={ method, headers:{'Content-Type':'application/json'} };
+    if(body) opts.body=JSON.stringify(body);
+    const r = await fetch(API+endpoint, opts);
+    return await r.json();
+  } catch(e){
+    return { success:false, error:'Cannot reach server. Is node server.js running?' };
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  CONNECTION CHECK
+// ══════════════════════════════════════════════════════
+let isConnected = false;
+async function checkConn(){
+  const r = await api('GET','/stats');
+  const dot=$('cdot'), st=$('conn-status');
+  if(r.success){
+    dot.className='conn-dot conn-on';
+    st.innerHTML='<span class="conn-dot conn-on"></span>MySQL Connected';
+    isConnected=true;
+    loadDashboard(r);
+  } else {
+    dot.className='conn-dot conn-off';
+    st.innerHTML='<span class="conn-dot conn-off"></span>Not connected';
+    toast('Cannot connect to MySQL server. Run: node server.js','error');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  EXPORT TO EXCEL
+// ══════════════════════════════════════════════════════
+function exportToExcel(tableType) {
+  let data = [];
+  let filename = '';
+  
+  if (tableType === 'users' && usersCache.length > 0) {
+    data = usersCache.map(u => ({
+      'User ID': u.User_ID,
+      'First Name': u.First_Name,
+      'Last Name': u.Last_Name,
+      'Email': u.Email,
+      'Role': u.Role,
+      'Department': u.Department || '—',
+      'Phone Numbers': u.Phones || '—'
+    }));
+    filename = 'users.xlsx';
+  } 
+  else if (tableType === 'servers' && serversCache.length > 0) {
+    data = serversCache.map(s => ({
+      'Server ID': s.Server_ID,
+      'Server Name': s.Server_Name,
+      'CPU Capacity': s.CPU_Capacity,
+      'RAM Capacity (GB)': s.RAM_Capacity,
+      'Storage Capacity (GB)': s.Storage_Capacity,
+      'Data Center': s.Data_Center,
+      'Rack No': s.Rack_No,
+      'Status': s.Status,
+      'Created At': s.Created_At ? new Date(s.Created_At).toLocaleString() : '—'
+    }));
+    filename = 'servers.xlsx';
+  }
+  else if (tableType === 'allocations') {
+    // Extract visible data from table
+    const rows = document.querySelectorAll('#t-alloc tbody tr');
+    rows.forEach(row => {
+      if (row.style.display !== 'none') {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 9) {
+          data.push({
+            'Allocation ID': cells[0].textContent.replace('#', '').trim(),
+            'User Name': cells[1].textContent.trim(),
+            'Server Name': cells[2].textContent.trim(),
+            'Allocation Date': cells[3].textContent.trim(),
+            'Release Date': cells[4].textContent.includes('Active') ? 'Active' : cells[4].textContent.trim(),
+            'Allocated CPU': cells[5].textContent.trim(),
+            'Allocated RAM (GB)': cells[6].textContent.trim(),
+            'Allocated Storage (GB)': cells[7].textContent.trim()
+          });
+        }
+      }
+    });
+    filename = 'allocations.xlsx';
+  }
+  else if (tableType === 'maintenance') {
+    // Extract visible data from table
+    const rows = document.querySelectorAll('#t-maint tbody tr');
+    rows.forEach(row => {
+      if (row.style.display !== 'none') {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 8) {
+          data.push({
+            'Maintenance ID': cells[0].textContent.replace('#', '').trim(),
+            'Server Name': cells[1].textContent.trim(),
+            'Date': cells[2].textContent.trim(),
+            'Description': cells[3].textContent.trim(),
+            'Technician': cells[4].textContent.trim(),
+            'Priority': cells[5].textContent.trim(),
+            'Status': cells[6].textContent.trim()
+          });
+        }
+      }
+    });
+    filename = 'maintenance.xlsx';
+  }
+  
+  // Handle no data case
+  if (data.length === 0) {
+    toast('No data to export', 'error');
+    return;
+  }
+  
+  // Create workbook and worksheet
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
+  
+  // Download file
+  XLSX.writeFile(workbook, filename);
+  toast(`✓ Exported ${data.length} records to ${filename}`, 'success');
+}
+
+// ══════════════════════════════════════════════════════
+//  PDF REPORT GENERATION
+// ══════════════════════════════════════════════════════
+let reportCharts = {};
+
+async function generateReport() {
+  const btn = $('report-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating...';
+  
+  try {
+    // Fetch stats
+    const stats = await api('GET', '/stats');
+    if (!stats.success) {
+      toast('Failed to fetch data for report', 'error');
+      btn.disabled = false;
+      btn.textContent = '📊 Generate Report';
+      return;
+    }
+
+    // Clear previous charts
+    Object.values(reportCharts).forEach(chart => {
+      if (chart) chart.destroy();
+    });
+    reportCharts = {};
+
+    // Populate report container
+    populateReportData(stats);
+
+    // Wait for charts to render
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Render charts
+    renderReportCharts(stats);
+
+    // Wait for charts to complete
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Convert to PDF and download
+    await convertReportToPDF();
+
+    toast('✓ Report generated and downloaded successfully!', 'success');
+  } catch (err) {
+    console.error('Report generation error:', err);
+    toast('Error generating report: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📊 Generate Report';
+  }
+}
+
+function populateReportData(stats) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  
+  $('report-date').textContent = `Generated on: ${dateStr} at ${timeStr}`;
+  $('report-users').textContent = stats.users || 0;
+  $('report-servers').textContent = stats.servers || 0;
+  $('report-alloc').textContent = stats.allocations || 0;
+  $('report-maint').textContent = stats.maintenance || 0;
+}
+
+function renderReportCharts(stats) {
+  // Destroy old charts if they exist
+  if (reportCharts.pieChart) reportCharts.pieChart.destroy();
+  if (reportCharts.barChart) reportCharts.barChart.destroy();
+
+  // Pie Chart - Maintenance Status
+  const pieCtx = $('report-pie-chart').getContext('2d');
+  const maintStatusMap = {};
+  if (stats.maintStatus && Array.isArray(stats.maintStatus)) {
+    stats.maintStatus.forEach(m => {
+      maintStatusMap[m.Maintenance_Status || 'Unknown'] = m.cnt || 0;
+    });
+  }
+  
+  const pieColors = {
+    'Completed': '#10b981',
+    'In Progress': '#f59e0b',
+    'Pending': '#ef4444',
+    'Unknown': '#94a3b8'
+  };
+  
+  reportCharts.pieChart = new Chart(pieCtx, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(maintStatusMap),
+      datasets: [{
+        data: Object.values(maintStatusMap),
+        backgroundColor: Object.keys(maintStatusMap).map(k => pieColors[k] || '#3b82f6'),
+        borderColor: '#fff',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            font: { size: 11 },
+            padding: 10,
+            usePointStyle: true
+          }
+        }
+      }
+    }
+  });
+
+  // Bar Chart - CPU Capacity
+  const barCtx = $('report-bar-chart').getContext('2d');
+  const cpuLabels = stats.cpuData ? stats.cpuData.map(s => s.Server_Name || 'Server') : [];
+  const cpuValues = stats.cpuData ? stats.cpuData.map(s => s.CPU_Capacity || 0) : [];
+  
+  reportCharts.barChart = new Chart(barCtx, {
+    type: 'bar',
+    data: {
+      labels: cpuLabels,
+      datasets: [{
+        label: 'CPU Cores',
+        data: cpuValues,
+        backgroundColor: '#3b82f6',
+        borderColor: '#2563eb',
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      indexAxis: 'y',
+      plugins: {
+        legend: {
+          display: true,
+          labels: {
+            font: { size: 11 },
+            padding: 10
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { font: { size: 10 } }
+        },
+        y: {
+          ticks: { font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+async function convertReportToPDF() {
+  const container = $('report-container');
+  container.style.display = 'block';
+
+  try {
+    // Convert HTML to Canvas
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      windowHeight: container.scrollHeight,
+      windowWidth: container.scrollWidth
+    });
+
+    // Create PDF
+    const { jsPDF } = window.jspdf;
+    const pdfWidth = 210; // A4 width in mm
+    const pdfHeight = 297; // A4 height in mm
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const imgWidth = pdfWidth - 10; // Leave 5mm margin on each side
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 5; // Start with 5mm margin from top
+
+    // Add first page
+    pdf.addImage(imgData, 'PNG', 5, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight - 10;
+
+    // Add additional pages if needed
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 5, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight - 10;
+    }
+
+    // Generate filename with timestamp
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `SRMS_Report_${timestamp}.pdf`;
+
+    // Download
+    pdf.save(filename);
+  } finally {
+    container.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════
+let curPanel='dashboard';
+const titles={ dashboard:'Dashboard', users:'Users', servers:'Servers', alloc:'Resource Allocations', maint:'Maintenance', queries:'SQL Queries', calc:'Resource Calculator' };
+const crumbs={ dashboard:'/ overview', users:'/ table records', servers:'/ table records', alloc:'/ table records', maint:'/ table records', queries:'/ live mysql', calc:'/ processing' };
+const addLabels={ users:'+ Add User', servers:'+ Add Server', alloc:'+ Add Allocation', maint:'+ Add Maintenance' };
+
+function go(name, el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  $(`p-${name}`).classList.add('active');
+  if(el) el.classList.add('active');
+  else { document.querySelectorAll('.nav-item').forEach(n=>{ if(n.textContent.toLowerCase().includes(name)) n.classList.add('active'); }); }
+  curPanel=name;
+  $('ptitle').textContent=titles[name]||name;
+  $('pcrumb').textContent=crumbs[name]||'';
+  const ab=$('addbtn');
+  if(addLabels[name]){ ab.style.display='inline-flex'; ab.textContent=addLabels[name]; }
+  else { ab.style.display='none'; }
+  const rb=$('report-btn');
+  if(name==='dashboard'){ rb.style.display='inline-flex'; }
+  else { rb.style.display='none'; }
+  loadPanel(name);
+}
+
+async function loadPanel(name){
+  if(name==='dashboard') { const r=await api('GET','/stats'); if(r.success) loadDashboard(r); }
+  else if(name==='users') loadUsers();
+  else if(name==='servers') loadServers();
+  else if(name==='alloc') loadAlloc();
+  else if(name==='maint') loadMaint();
+  else if(name==='calc') { await loadCalcSelects(); loadUtilOverview(); }
+}
+
+// ══════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════
+async function loadDashboard(data){
+  if(!data){ const r=await api('GET','/stats'); if(!r.success) return; data=r; }
+  $('st-users').textContent=data.users;
+  $('st-servers').textContent=data.servers;
+  $('st-alloc').textContent=data.allocations;
+  $('st-maint').textContent=data.maintenance;
+
+  // CPU chart
+  const maxCpu=Math.max(...data.cpuData.map(s=>s.CPU_Capacity));
+  $('ch-cpu').innerHTML=data.cpuData.map(s=>`
+    <div class="bar-row">
+      <div class="bar-lbl">${s.Server_Name}</div>
+      <div class="bar-trk"><div class="bar-fil" style="background:var(--accent);width:${(s.CPU_Capacity/maxCpu*100).toFixed(0)}%"></div></div>
+      <div class="bar-val">${s.CPU_Capacity}</div>
+    </div>`).join('');
+
+  // RAM chart
+  const maxRam=Math.max(...data.ramData.map(s=>s.RAM_Capacity));
+  $('ch-ram').innerHTML=data.ramData.map(s=>`
+    <div class="bar-row">
+      <div class="bar-lbl">${s.Server_Name}</div>
+      <div class="bar-trk"><div class="bar-fil" style="background:var(--accent2);width:${(s.RAM_Capacity/maxRam*100).toFixed(0)}%"></div></div>
+      <div class="bar-val">${s.RAM_Capacity}</div>
+    </div>`).join('');
+
+  // Maint pie
+  const mc={Completed:0,'In Progress':0,Pending:0};
+  data.maintStatus.forEach(m=>mc[m.Maintenance_Status]=m.cnt);
+  const cols={Completed:'var(--success)','In Progress':'var(--warning)',Pending:'var(--danger)'};
+  $('ch-maint').innerHTML=Object.entries(mc).map(([k,v])=>`
+    <div class="pie-item">
+      <div class="pie-dot" style="background:${cols[k]}"></div>
+      <div class="pie-lbl">${k}</div>
+      <div class="pie-num" style="color:${cols[k]}">${v}</div>
+    </div>`).join('');
+
+  // Alloc per user
+  const maxA=Math.max(...data.allocUser.map(u=>u.cnt),1);
+  $('ch-alloc').innerHTML=data.allocUser.map(u=>`
+    <div class="bar-row">
+      <div class="bar-lbl">${u.name.split(' ')[0]}</div>
+      <div class="bar-trk"><div class="bar-fil" style="background:var(--accent3);width:${(u.cnt/maxA*100).toFixed(0)}%"></div></div>
+      <div class="bar-val">${u.cnt}</div>
+    </div>`).join('');
+
+  // Recent alloc
+  const ra=await api('GET','/allocations');
+  if(ra.success){
+    const sorted=[...ra.data].sort((a,b)=>new Date(b.Allocation_Date)-new Date(a.Allocation_Date)).slice(0,5);
+    $('recent-rows').innerHTML=sorted.map(a=>`<tr>
+      <td>${mono('#'+a.Allocation_ID)}</td>
+      <td>${a.User_Name}</td>
+      <td style="font-weight:600">${a.Server_Name}</td>
+      <td style="font-family:var(--mono);font-size:12px">${a.Allocation_Date?.split('T')[0]||'—'}</td>
+      <td style="font-family:var(--mono)">${a.Allocated_CPU}</td>
+      <td style="font-family:var(--mono)">${a.Allocated_RAM}</td>
+      <td>${a.Release_Date?badge('Completed'):'<span class="badge b-active">Active</span>'}</td>
+    </tr>`).join('');
+  }
+
+  // Update badges
+  $('nb-users').textContent=data.users;
+  $('nb-servers').textContent=data.servers;
+  $('nb-alloc').textContent=data.allocations;
+  $('nb-maint').textContent=data.maintenance;
+}
+
+// ══════════════════════════════════════════════════════
+//  USERS
+// ══════════════════════════════════════════════════════
+let usersCache=[];
+async function loadUsers(){
+  const tbody=$('t-users').querySelector('tbody');
+  tbody.innerHTML=`<tr><td colspan="8" class="empty"><div class="loading"></div></td></tr>`;
+  const r=await api('GET','/users');
+  if(!r.success){ toast(r.error,'error'); return; }
+  usersCache=r.data;
+  $('c-users').textContent=`${r.data.length} records`;
+  $('nb-users').textContent=r.data.length;
+  tbody.innerHTML=r.data.map(u=>`<tr>
+    <td>${mono('#'+u.User_ID)}</td>
+    <td>${u.First_Name}</td><td>${u.Last_Name}</td>
+    <td style="font-family:var(--mono);font-size:12px;color:var(--text2)">${u.Email}</td>
+    <td>${roleBadge(u.Role)}</td>
+    <td style="font-size:12px;color:var(--text2)">${u.Department||'—'}</td>
+    <td style="font-family:var(--mono);font-size:12px">${u.Phones||'—'}</td>
+    <td><div class="abtns">
+      <button class="btn btn-ghost btn-sm" onclick="editUser(${u.User_ID})">✎ Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="delUser(${u.User_ID})">✕</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function openAdd(){ const ms={users:'m-user',servers:'m-server',alloc:'m-alloc',maint:'m-maint'}; if(ms[curPanel]) openM(ms[curPanel]); }
+async function openM(id){
+  await fillSelects();
+  $('eid-user')&&($('eid-user').value='');
+  $('eid-server')&&($('eid-server').value='');
+  $('eid-maint')&&($('eid-maint').value='');
+  $(id).classList.add('open');
+}
+function closeM(id){ $(id).classList.remove('open'); }
+
+async function saveUser(){
+  const id=$('eid-user').value;
+  const body={ First_Name:$('u-fn').value.trim(), Last_Name:$('u-ln').value.trim(),
+    Email:$('u-em').value.trim(), Role:$('u-ro').value,
+    Department:$('u-dep').value.trim(), Phone_No:$('u-ph').value.trim() };
+  if(!body.First_Name||!body.Last_Name||!body.Email){ toast('Fill all required fields','error'); return; }
+  const r = id ? await api('PUT',`/users/${id}`,body) : await api('POST','/users',body);
+  if(r.success){ toast(r.message); closeM('m-user'); loadUsers(); }
+  else toast(r.error,'error');
+}
+
+async function editUser(id){
+  const r=await api('GET',`/users/${id}`);
+  if(!r.success){ toast(r.error,'error'); return; }
+  const u=r.data;
+  $('eid-user').value=id;
+  $('u-fn').value=u.First_Name; $('u-ln').value=u.Last_Name;
+  $('u-em').value=u.Email; $('u-ro').value=u.Role;
+  $('u-dep').value=u.Department||''; $('u-ph').value='';
+  $('mt-user').textContent='Edit User';
+  $('m-user').classList.add('open');
+}
+
+async function delUser(id){
+  if(!confirm('Delete this user? Their allocations will also be deleted (CASCADE).')) return;
+  const r=await api('DELETE',`/users/${id}`);
+  if(r.success){ toast(r.message,'info'); loadUsers(); }
+  else toast(r.error,'error');
+}
+
+// ══════════════════════════════════════════════════════
+//  SERVERS
+// ══════════════════════════════════════════════════════
+let serversCache=[];
+async function loadServers(){
+  const tbody=$('t-servers').querySelector('tbody');
+  tbody.innerHTML=`<tr><td colspan="9" class="empty"><div class="loading"></div></td></tr>`;
+  const r=await api('GET','/servers');
+  if(!r.success){ toast(r.error,'error'); return; }
+  serversCache=r.data;
+  $('c-servers').textContent=`${r.data.length} records`;
+  $('nb-servers').textContent=r.data.length;
+  tbody.innerHTML=r.data.map(s=>`<tr>
+    <td>${mono('#'+s.Server_ID)}</td>
+    <td style="font-weight:600">${s.Server_Name}</td>
+    <td style="font-family:var(--mono)">${s.CPU_Capacity}</td>
+    <td style="font-family:var(--mono)">${s.RAM_Capacity}</td>
+    <td style="font-family:var(--mono)">${Number(s.Storage_Capacity).toLocaleString()}</td>
+    <td style="font-size:12px;color:var(--text2)">${s.Data_Center}</td>
+    <td style="font-family:var(--mono);font-size:12px">${s.Rack_No}</td>
+    <td>${badge(s.Status)}</td>
+    <td><div class="abtns">
+      <button class="btn btn-ghost btn-sm" onclick="editServer(${s.Server_ID})">✎ Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="delServer(${s.Server_ID})">✕</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+async function saveServer(){
+  const id=$('eid-server').value;
+  const body={ Server_Name:$('s-nm').value.trim(), CPU_Capacity:+$('s-cpu').value,
+    RAM_Capacity:+$('s-ram').value, Storage_Capacity:+$('s-st').value,
+    Data_Center:$('s-dc').value.trim(), Rack_No:$('s-rk').value.trim(), Status:$('s-sx').value };
+  if(!body.Server_Name||!body.CPU_Capacity||!body.RAM_Capacity||!body.Storage_Capacity||!body.Data_Center||!body.Rack_No)
+    { toast('Fill all required fields','error'); return; }
+  const r = id ? await api('PUT',`/servers/${id}`,body) : await api('POST','/servers',body);
+  if(r.success){ toast(r.message); closeM('m-server'); loadServers(); await fillSelects(); }
+  else toast(r.error,'error');
+}
+
+async function editServer(id){
+  const s=serversCache.find(x=>x.Server_ID===id); if(!s) return;
+  $('eid-server').value=id;
+  $('s-nm').value=s.Server_Name; $('s-cpu').value=s.CPU_Capacity;
+  $('s-ram').value=s.RAM_Capacity; $('s-st').value=s.Storage_Capacity;
+  $('s-dc').value=s.Data_Center; $('s-rk').value=s.Rack_No; $('s-sx').value=s.Status;
+  $('mt-server').textContent='Edit Server';
+  $('m-server').classList.add('open');
+}
+
+async function delServer(id){
+  if(!confirm('Delete this server? Allocations and maintenance records will also be deleted.')) return;
+  const r=await api('DELETE',`/servers/${id}`);
+  if(r.success){ toast(r.message,'info'); loadServers(); }
+  else toast(r.error,'error');
+}
+
+// ══════════════════════════════════════════════════════
+//  ALLOCATIONS
+// ══════════════════════════════════════════════════════
+async function loadAlloc(){
+  const tbody=$('t-alloc').querySelector('tbody');
+  tbody.innerHTML=`<tr><td colspan="9" class="empty"><div class="loading"></div></td></tr>`;
+  const r=await api('GET','/allocations');
+  if(!r.success){ toast(r.error,'error'); return; }
+  $('c-alloc').textContent=`${r.data.length} records`;
+  $('nb-alloc').textContent=r.data.length;
+  tbody.innerHTML=r.data.map(a=>`<tr>
+    <td>${mono('#'+a.Allocation_ID)}</td>
+    <td>${a.User_Name}</td>
+    <td style="font-weight:600">${a.Server_Name}</td>
+    <td style="font-family:var(--mono);font-size:12px">${a.Allocation_Date?.split('T')[0]||'—'}</td>
+    <td style="font-family:var(--mono);font-size:12px">${a.Release_Date?a.Release_Date.split('T')[0]:'<span style="color:var(--success);font-size:11px">● Active</span>'}</td>
+    <td style="font-family:var(--mono)">${a.Allocated_CPU}</td>
+    <td style="font-family:var(--mono)">${a.Allocated_RAM}</td>
+    <td style="font-family:var(--mono)">${a.Allocated_Storage}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="delAlloc(${a.Allocation_ID})">✕ Remove</button></td>
+  </tr>`).join('');
+}
+
+async function saveAlloc(){
+  const body={ User_ID:+$('a-uid').value, Server_ID:+$('a-sid').value,
+    Allocation_Date:$('a-dt').value, Release_Date:$('a-rd').value||null,
+    Allocated_CPU:+$('a-cpu').value, Allocated_RAM:+$('a-ram').value, Allocated_Storage:+$('a-sto').value };
+  if(!body.Allocation_Date||!body.Allocated_CPU||!body.Allocated_RAM||!body.Allocated_Storage)
+    { toast('Fill all required fields','error'); return; }
+  const r=await api('POST','/allocations',body);
+  if(r.success){ toast(r.message); closeM('m-alloc'); loadAlloc(); }
+  else toast(r.error,'error');
+}
+
+async function delAlloc(id){
+  if(!confirm('Remove this allocation?')) return;
+  const r=await api('DELETE',`/allocations/${id}`);
+  if(r.success){ toast(r.message,'info'); loadAlloc(); }
+  else toast(r.error,'error');
+}
+
+// ══════════════════════════════════════════════════════
+//  MAINTENANCE
+// ══════════════════════════════════════════════════════
+async function loadMaint(){
+  const tbody=$('t-maint').querySelector('tbody');
+  tbody.innerHTML=`<tr><td colspan="8" class="empty"><div class="loading"></div></td></tr>`;
+  const r=await api('GET','/maintenance');
+  if(!r.success){ toast(r.error,'error'); return; }
+  $('c-maint').textContent=`${r.data.length} records`;
+  $('nb-maint').textContent=r.data.length;
+  tbody.innerHTML=r.data.map(m=>`<tr>
+    <td>${mono('#'+m.Maintenance_ID)}</td>
+    <td style="font-weight:600">${m.Server_Name}</td>
+    <td style="font-family:var(--mono);font-size:12px">${m.Maintenance_Date?.split('T')[0]||'—'}</td>
+    <td style="font-size:12px;color:var(--text2);max-width:160px">${m.Description||'—'}</td>
+    <td>${m.Tech_First_Name} ${m.Tech_Last_Name}</td>
+    <td><span style="font-size:11px;color:var(--text3)">${m.Priority||'—'}</span></td>
+    <td>${badge(m.Maintenance_Status)}</td>
+    <td><div class="abtns">
+      <button class="btn btn-success btn-sm" onclick="completeMaint(${m.Maintenance_ID})">✓ Done</button>
+      <button class="btn btn-danger btn-sm" onclick="delMaint(${m.Maintenance_ID})">✕</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+async function saveMaint(){
+  const id=$('eid-maint').value;
+  const body={ Server_ID:+$('m-sid').value, Maintenance_Date:$('m-dt').value,
+    Description:$('m-ds').value.trim(), Tech_First_Name:$('m-fn').value.trim(),
+    Tech_Last_Name:$('m-ln').value.trim(), Maintenance_Status:$('m-sx').value, Priority:$('m-pr').value };
+  if(!body.Maintenance_Date||!body.Tech_First_Name||!body.Tech_Last_Name)
+    { toast('Fill all required fields','error'); return; }
+  const r = id ? await api('PUT',`/maintenance/${id}`,body) : await api('POST','/maintenance',body);
+  if(r.success){ toast(r.message); closeM('m-maint'); loadMaint(); loadServers(); }
+  else toast(r.error,'error');
+}
+
+async function completeMaint(id){
+  const r=await api('PUT',`/maintenance/${id}`,{Maintenance_Status:'Completed',Priority:'Medium',Description:''});
+  if(r.success){ toast('Marked as Completed! Server set back to Active.'); loadMaint(); loadServers(); }
+  else toast(r.error,'error');
+}
+
+async function delMaint(id){
+  if(!confirm('Delete this maintenance record?')) return;
+  const r=await api('DELETE',`/maintenance/${id}`);
+  if(r.success){ toast(r.message,'info'); loadMaint(); }
+  else toast(r.error,'error');
+}
+
+// ══════════════════════════════════════════════════════
+//  FILL SELECT DROPDOWNS
+// ══════════════════════════════════════════════════════
+async function fillSelects(){
+  const ur=await api('GET','/users');
+  const sr=await api('GET','/servers');
+  if(ur.success){
+    const opts=ur.data.map(u=>`<option value="${u.User_ID}">${u.First_Name} ${u.Last_Name}</option>`).join('');
+    $('a-uid')&&($('a-uid').innerHTML=opts);
+  }
+  if(sr.success){
+    const opts=sr.data.map(s=>`<option value="${s.Server_ID}">${s.Server_Name}</option>`).join('');
+    $('a-sid')&&($('a-sid').innerHTML=opts);
+    $('m-sid')&&($('m-sid').innerHTML=opts);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  SQL QUERY RUNNER
+// ══════════════════════════════════════════════════════
+const presets={
+  q1:`-- Q1: SELECT with WHERE — Available servers (not under active maintenance)
+SELECT Server_ID, Server_Name, CPU_Capacity, RAM_Capacity, Storage_Capacity, Data_Center
+FROM SERVER
+WHERE Server_ID NOT IN (
+    SELECT DISTINCT Server_ID FROM MAINTENANCE
+    WHERE Maintenance_Status = 'In Progress'
+);`,
+  q2:`-- Q2: JOIN — User details with allocations and server info
+SELECT U.User_ID, CONCAT(U.First_Name,' ',U.Last_Name) AS Full_Name,
+       U.Role, RA.Allocation_ID, S.Server_Name,
+       RA.Allocation_Date, RA.Allocated_CPU, RA.Allocated_RAM
+FROM USER U
+JOIN RESOURCE_ALLOCATION RA ON U.User_ID = RA.User_ID
+JOIN SERVER S ON RA.Server_ID = S.Server_ID;`,
+  q3:`-- Q3: Aggregate — COUNT and AVG per server
+SELECT S.Server_Name,
+       COUNT(RA.Allocation_ID) AS Total_Allocations,
+       AVG(RA.Allocated_CPU)   AS Avg_CPU,
+       AVG(RA.Allocated_RAM)   AS Avg_RAM
+FROM SERVER S
+LEFT JOIN RESOURCE_ALLOCATION RA ON S.Server_ID = RA.Server_ID
+GROUP BY S.Server_ID, S.Server_Name;`,
+  q4:`-- Q4: GROUP BY + HAVING — Users with more than 1 allocation
+SELECT U.User_ID, CONCAT(U.First_Name,' ',U.Last_Name) AS Full_Name,
+       COUNT(RA.Allocation_ID) AS Total_Allocations
+FROM USER U
+JOIN RESOURCE_ALLOCATION RA ON U.User_ID = RA.User_ID
+GROUP BY U.User_ID
+HAVING COUNT(RA.Allocation_ID) > 1
+ORDER BY Total_Allocations DESC;`,
+  q5:`-- Q5: ORDER BY — Maintenance log newest first
+SELECT M.Maintenance_ID, S.Server_Name, M.Maintenance_Date,
+       CONCAT(M.Tech_First_Name,' ',M.Tech_Last_Name) AS Technician,
+       M.Priority, M.Maintenance_Status
+FROM MAINTENANCE M
+JOIN SERVER S ON M.Server_ID = S.Server_ID
+ORDER BY M.Maintenance_Date DESC;`,
+  q6:`-- Q6: UPDATE — Change server status to Active
+UPDATE SERVER
+SET Status = 'Active'
+WHERE Server_Name = 'Gamma-03';`,
+  q7:`-- Q7: DELETE — Remove a completed/released allocation
+DELETE FROM RESOURCE_ALLOCATION
+WHERE Release_Date IS NOT NULL
+AND Allocation_ID = 1;`,
+  q8:`-- Q8: ALTER TABLE — Add a new column to USER
+ALTER TABLE USER
+ADD COLUMN IF NOT EXISTS LinkedIn_URL VARCHAR(200) DEFAULT NULL;`,
+  q9:`-- Q9: Servers currently needing attention
+SELECT S.Server_Name, S.Data_Center,
+       CONCAT(M.Tech_First_Name,' ',M.Tech_Last_Name) AS Technician,
+       M.Priority, M.Maintenance_Status
+FROM SERVER S
+JOIN MAINTENANCE M ON S.Server_ID = M.Server_ID
+WHERE M.Maintenance_Status IN ('Pending','In Progress')
+ORDER BY M.Priority DESC;`,
+  q10:`-- Q10: LIKE — Search users by name
+SELECT User_ID, First_Name, Last_Name, Email, Role
+FROM USER
+WHERE First_Name LIKE '%a%'
+   OR Last_Name  LIKE '%a%';`,
+};
+
+function lq(key){ $('sqlinput').value=presets[key]; }
+
+async function runQ(){
+  const sql=$('sqlinput').value.trim();
+  if(!sql){ toast('Enter a SQL query','error'); return; }
+  const start=Date.now();
+  const r=await api('POST','/query',{sql});
+  const ms=Date.now()-start;
+
+  $('qmsg').style.display='none';
+  $('qresult-wrap').style.display='none';
+
+  if(!r.success){
+    $('qmsg').style.display='block';
+    $('qmsg').innerHTML=`<span style="color:var(--danger);font-family:var(--mono);font-size:13px">✗ MySQL Error: ${r.error}</span>`;
+    toast('Query error: '+r.error,'error'); return;
+  }
+
+  if(r.type==='select'){
+    $('qresult-wrap').style.display='block';
+    $('qtime').textContent=`${r.count} row(s) · ${r.time}ms · MySQL`;
+    const cols=r.rows.length?Object.keys(r.rows[0]):[];
+    $('qthead').innerHTML=`<tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr>`;
+    $('qtbody').innerHTML=r.rows.map(row=>`<tr>${cols.map(c=>`<td style="font-size:13px">${row[c]??'<span style="color:var(--text3)">NULL</span>'}</td>`).join('')}</tr>`).join('');
+    toast(`${r.count} row(s) returned in ${r.time}ms`);
+  } else {
+    $('qmsg').style.display='block';
+    $('qmsg').innerHTML=`<span style="color:var(--success);font-family:var(--mono);font-size:13px">✓ ${r.message}</span><br><span style="font-size:11px;color:var(--text3)">Time: ${r.time}ms · Rows affected: ${r.affectedRows}</span>`;
+    toast(r.message,'info');
+    // Refresh affected panel
+    if(sql.toLowerCase().includes('server')) loadServers();
+    if(sql.toLowerCase().includes('user')) loadUsers();
+    if(sql.toLowerCase().includes('maintenance')) loadMaint();
+    if(sql.toLowerCase().includes('resource_allocation')) loadAlloc();
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  RESOURCE CALCULATOR (uses real DB data)
+// ══════════════════════════════════════════════════════
+async function loadCalcSelects(){
+  const r=await api('GET','/servers');
+  if(!r.success) return;
+  $('calc-sv').innerHTML='<option value="">-- Choose Server --</option>'+
+    r.data.map(s=>`<option value="${s.Server_ID}" data-cpu="${s.CPU_Capacity}" data-ram="${s.RAM_Capacity}">${s.Server_Name} (CPU:${s.CPU_Capacity} RAM:${s.RAM_Capacity}GB)</option>`).join('');
+}
+
+async function calcUpdate(){
+  const sel=$('calc-sv');
+  const opt=sel.options[sel.selectedIndex];
+  const reqCpu=+$('calc-cpu').value||0;
+  const reqRam=+$('calc-ram').value||0;
+  if(!sel.value||!reqCpu||!reqRam){ $('calc-bars').style.display='none'; $('calc-res').style.display='none'; return; }
+
+  const totalCpu=+opt.dataset.cpu, totalRam=+opt.dataset.ram;
+
+  // Get active allocations for this server from real DB
+  const r=await api('GET','/allocations');
+  if(!r.success) return;
+  const active=r.data.filter(a=>a.Server_ID===+sel.value&&!a.Release_Date);
+  const usedCpu=active.reduce((x,a)=>x+a.Allocated_CPU,0);
+  const usedRam=active.reduce((x,a)=>x+a.Allocated_RAM,0);
+  const avCpu=totalCpu-usedCpu, avRam=totalRam-usedRam;
+
+  const cpuAfter=Math.min(100,((usedCpu+reqCpu)/totalCpu*100));
+  const ramAfter=Math.min(100,((usedRam+reqRam)/totalRam*100));
+
+  $('calc-bars').style.display='block';
+  $('calc-res').style.display='block';
+  $('cpu-bar').style.width=cpuAfter+'%';
+  $('cpu-bar').style.background=cpuAfter>85?'var(--danger)':cpuAfter>60?'var(--warning)':'var(--accent)';
+  $('cpu-pct').textContent=cpuAfter.toFixed(1)+'%';
+  $('ram-bar').style.width=ramAfter+'%';
+  $('ram-bar').style.background=ramAfter>85?'var(--danger)':ramAfter>60?'var(--warning)':'var(--accent2)';
+  $('ram-pct').textContent=ramAfter.toFixed(1)+'%';
+  $('r-cpu').textContent=avCpu;
+  $('r-ram').textContent=avRam;
+  const ok=reqCpu<=avCpu&&reqRam<=avRam;
+  $('r-status').textContent=ok?'✓ Feasible':'✗ Exceeds';
+  $('r-status').style.color=ok?'var(--success)':'var(--danger)';
+}
+
+async function loadUtilOverview(){
+  const sr=await api('GET','/servers');
+  const ar=await api('GET','/allocations');
+  if(!sr.success||!ar.success) return;
+  $('util-wrap').innerHTML=sr.data.map(sv=>{
+    const active=ar.data.filter(a=>a.Server_ID===sv.Server_ID&&!a.Release_Date);
+    const usedCpu=active.reduce((x,a)=>x+a.Allocated_CPU,0);
+    const usedRam=active.reduce((x,a)=>x+a.Allocated_RAM,0);
+    const cpuP=Math.min(100,(usedCpu/sv.CPU_Capacity*100)).toFixed(0);
+    const ramP=Math.min(100,(usedRam/sv.RAM_Capacity*100)).toFixed(0);
+    return `<div style="margin-bottom:14px;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <span style="font-weight:600">${sv.Server_Name}</span>${badge(sv.Status)}
+      </div>
+      <div class="ubar">
+        <div class="ulbl"><span>CPU: ${usedCpu}/${sv.CPU_Capacity} cores</span><span>${cpuP}%</span></div>
+        <div class="utrk"><div class="ufil" style="background:${cpuP>85?'var(--danger)':'var(--accent)'};width:${cpuP}%"></div></div>
+      </div>
+      <div class="ubar">
+        <div class="ulbl"><span>RAM: ${usedRam}/${sv.RAM_Capacity} GB</span><span>${ramP}%</span></div>
+        <div class="utrk"><div class="ufil" style="background:${ramP>85?'var(--danger)':'var(--accent2)'};width:${ramP}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── SEARCH / FIRST / LAST ──
+function filter(tid,term){
+  document.querySelectorAll(`#${tid} tbody tr`).forEach(r=>{
+    r.style.display=r.textContent.toLowerCase().includes(term.toLowerCase())?'':'none';
+  });
+}
+function navFirst(tid){
+  const rows=[...document.querySelectorAll(`#${tid} tbody tr`)].filter(r=>r.style.display!=='none');
+  if(rows.length){ rows.forEach(r=>r.style.background=''); rows[0].style.background='rgba(59,130,246,.12)'; rows[0].scrollIntoView({behavior:'smooth',block:'nearest'}); }
+}
+function navLast(tid){
+  const rows=[...document.querySelectorAll(`#${tid} tbody tr`)].filter(r=>r.style.display!=='none');
+  if(rows.length){ rows.forEach(r=>r.style.background=''); const l=rows[rows.length-1]; l.style.background='rgba(59,130,246,.12)'; l.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+}
+
+// ── INIT ──
+checkConn();
+</script>
+</body>
+</html>
