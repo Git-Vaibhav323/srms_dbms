@@ -1,0 +1,13 @@
+{
+  "name": "srms-server-resource-management",
+  "version": "2.0.0",
+  "description": "SRMS — VIT Chennai BCSE302L DA3 — with Chatbot + PDF",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mysql2": "^3.6.5",
+    "pdfkit": "^0.15.0"
+  }
+}
